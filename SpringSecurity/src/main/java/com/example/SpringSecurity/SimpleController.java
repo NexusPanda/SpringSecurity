@@ -48,7 +48,12 @@ public class SimpleController {
         return "Hello Admin !!!";
     }
 
-    @PostMapping("/signin")
+    @GetMapping
+    public void checking(){
+        System.out.println("Aruna, I Love You");
+    }
+
+    @PostMapping("/signing")
     public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest){
         Authentication authentication;
         try {

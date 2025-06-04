@@ -23,8 +23,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 import javax.sql.DataSource;
 
-import static org.springframework.security.config.Customizer.withDefaults;
-
 
 @Configuration
 @EnableWebSecurity
@@ -45,7 +43,7 @@ public class SecurityConfig {
     @Bean
     SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
         http.authorizeHttpRequests((requests) -> requests
-                .requestMatchers("/h2-console").permitAll()
+                .requestMatchers("/h2-console/**").permitAll()
                 .requestMatchers("/signin").permitAll()
                 .anyRequest().authenticated());
         http.sessionManagement(session ->
@@ -92,7 +90,7 @@ public class SecurityConfig {
         };
     }
 
-    
+
     @Bean
     public PasswordEncoder passwordEncoder(){
         return new BCryptPasswordEncoder();
