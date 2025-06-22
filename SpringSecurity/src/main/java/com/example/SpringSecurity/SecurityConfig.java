@@ -40,38 +40,56 @@ public class SecurityConfig {
         return new AuthTokenFilter();
     }
 
+//    @Bean
+//    SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
+//        http.authorizeHttpRequests((requests) -> requests
+//                .requestMatchers("/h2-console/**").permitAll()
+//                .requestMatchers("/signin", "/check").permitAll()
+//                .anyRequest().authenticated());
+//
+//        http.sessionManagement(session ->
+//                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+////        http.formLogin(withDefaults());
+////        http.httpBasic(withDefaults());
+//        http.exceptionHandling(
+//                exception ->
+//                        exception.authenticationEntryPoint(authEntryPointJwt)
+//        );
+//
+//        http.headers(headers ->
+//                headers.frameOptions(frame -> frame.sameOrigin()));
+//
+//        http.csrf(csrf -> csrf.disable());
+//
+//        http.addFilterBefore(authenticationJwtTokenFilter(),
+//                UsernamePasswordAuthenticationFilter.class);
+//        return http.build();
+//    }
+
     @Bean
-    SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
-        http.authorizeHttpRequests((requests) -> requests
-                .requestMatchers("/h2-console/**").permitAll()
-                .requestMatchers("/signin").permitAll()
-                .anyRequest().authenticated());
-        http.sessionManagement(session ->
-                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-//        http.formLogin(withDefaults());
-//        http.httpBasic(withDefaults());
-        http.exceptionHandling(
-                ExceptionRequest ->
-                        ExceptionRequest.authenticationEntryPoint(authEntryPointJwt)
-        );
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+                .csrf(csrf -> csrf.disable())
+                .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/h2-console/**", "/signin", "/check").permitAll()
+                        .anyRequest().authenticated()
+                )
+                .exceptionHandling(e -> e.authenticationEntryPoint(authEntryPointJwt))
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
-        http.headers(headers ->
-                headers.frameOptions(frameOptions ->
-                        frameOptions.sameOrigin()));
-        http.csrf(csrf -> csrf.disable());
+        http.addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
 
-        http.addFilterBefore(authenticationJwtTokenFilter(),
-                UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 
     @Bean
-    public UserDetailsService userDetailsService(DataSource dataSource){
+    public UserDetailsService userDetailsService(){
         return new JdbcUserDetailsManager(dataSource);
     }
 
     @Bean
-    public CommandLineRunner inidata(UserDetailsService userDetailsService) {
+    public CommandLineRunner initData(UserDetailsService userDetailsService){
         return args -> {
             JdbcUserDetailsManager manager = (JdbcUserDetailsManager) userDetailsService;
             UserDetails admin = User.withUsername("admin")
@@ -84,9 +102,10 @@ public class SecurityConfig {
                     .roles("USER")
                     .build();
 
-            JdbcUserDetailsManager userDetailsManager = new JdbcUserDetailsManager(dataSource);
-            userDetailsManager.createUser(user1);
-            userDetailsManager.createUser(admin);
+            JdbcUserDetailsManager jdbcUserDetailsManager =
+                    new JdbcUserDetailsManager(dataSource);
+            jdbcUserDetailsManager.createUser(user1);
+            jdbcUserDetailsManager.createUser(admin);
         };
     }
 

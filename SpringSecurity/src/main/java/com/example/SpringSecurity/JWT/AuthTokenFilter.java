@@ -7,7 +7,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -34,12 +33,23 @@ public class AuthTokenFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
 
-        logger.debug("AuthTokenFilter called for URI: {}", request.getRequestURI());
+        // ✅ Bypass JWT filter for H2 Console
+        String path = request.getRequestURI();
+        if (path.startsWith("/h2-console")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        logger.debug("AuthTokenFilter called for URI: {}", path);
         try {
             String jwt = parseJwt(request);
-            if(jwt != null && jwtUtils.validateToken(jwt)) {
+            System.out.println(">>> Authorization Header: " + request.getHeader("Authorization"));
+            System.out.println(">>> URI: " + path);
+
+            if (jwt != null && jwtUtils.validateToken(jwt)) {
                 String username = jwtUtils.getUserNameFromJwtToken(jwt);
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                         userDetails, null, userDetails.getAuthorities()
                 );
@@ -47,18 +57,34 @@ public class AuthTokenFilter extends OncePerRequestFilter {
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
                 logger.debug("Roles from JWT: {}", userDetails.getAuthorities());
-
             }
 
         } catch (Exception e) {
             logger.error("Cannot set user authentication: {}", e);
         }
 
+        // ✅ Proceed with the rest of the filter chain
+        filterChain.doFilter(request, response);
     }
+
 
     private String parseJwt(HttpServletRequest request) {
         String jwt = jwtUtils.getJwtFromHeader(request);
         logger.debug("AuthTokenFilter.java {}", jwt);
         return jwt;
     }
+
+//    public String parseJwt(HttpServletRequest request) {
+//        String bearerToken = request.getHeader("Authorization");
+//        System.out.println("Header: " + bearerToken);
+//        if (bearerToken != null) {
+//            System.out.println("Starts with Bearer? " + bearerToken.startsWith("Bearer "));
+//            if (bearerToken.startsWith("Bearer ")) {
+//                String token = bearerToken.substring(7);
+//                System.out.println("Parsed token: " + token);
+//                return token;
+//            }
+//        }
+//        return null;
+//    }
 }
